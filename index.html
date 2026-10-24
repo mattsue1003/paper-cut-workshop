@@ -628,6 +628,35 @@ function setPaper(fold, shape){
   paintWedge(W0, fold, shape, '#000', []);
   const b = wedgeBox(); wedgeRect = {cx:(b.x0+b.x1)/2, cy:(b.y0+b.y1)/2, h:Math.max(b.x1-b.x0,b.y1-b.y0)/2*1.16+18};
 }
+/* 打開後跟主紙不相連的碎紙會掉下來：只留最大的那一塊 */
+let lastScraps = 0;
+const SCRAP = mk(P), SCRAPc = SCRAP.getContext('2d', {willReadFrequently:true});
+function dropScraps(){
+  lastScraps = 0;
+  if (!applied.length) return;
+  buildF(SCRAP, WY, L.all);
+  const img = SCRAPc.getImageData(0,0,P,P), d = img.data, n = P*P, lab = new Int32Array(n), sizes = [0];
+  const stk = new Int32Array(n);
+  for (let i=0;i<n;i++){
+    if (lab[i] || d[i*4+3] < 128) continue;
+    const id = sizes.length; let sp = 0, size = 0; stk[sp++] = i; lab[i] = id;
+    while (sp){ const j = stk[--sp]; size++; const x = j%P;
+      if (x>0 && !lab[j-1] && d[(j-1)*4+3] >= 128){ lab[j-1]=id; stk[sp++]=j-1; }
+      if (x<P-1 && !lab[j+1] && d[(j+1)*4+3] >= 128){ lab[j+1]=id; stk[sp++]=j+1; }
+      if (j>=P && !lab[j-P] && d[(j-P)*4+3] >= 128){ lab[j-P]=id; stk[sp++]=j-P; }
+      if (j<n-P && !lab[j+P] && d[(j+P)*4+3] >= 128){ lab[j+P]=id; stk[sp++]=j+P; } }
+    sizes.push(size);
+  }
+  if (sizes.length <= 2) return;
+  let main = 1; for (let k=2;k<sizes.length;k++) if (sizes[k] > sizes[main]) main = k;
+  for (let k=1;k<sizes.length;k++) if (k !== main && sizes[k] > 30) lastScraps++;
+  // 不是主紙的地方（含主紙外圍一圈鋸齒）做成遮罩，從摺好的那一份擦掉
+  for (let i=0;i<n;i++){ const keep = lab[i] === main; d[i*4] = d[i*4+1] = d[i*4+2] = 0; d[i*4+3] = (lab[i] && !keep) ? 255 : 0; }
+  SCRAPc.putImageData(img,0,0);
+  for (const cv of [WX, WY]){ const c = cv.getContext('2d'); c.setTransform(1,0,0,1,0,0); c.globalCompositeOperation='destination-out';
+    for (let a=0;a<8;a++) c.drawImage(SCRAP, Math.cos(a*Math.PI/4)*1.2, Math.sin(a*Math.PI/4)*1.2);
+    c.globalCompositeOperation='source-over'; }
+}
 let applied = [], FRONT = [], a4Frame = 0, a4Drop = 0;
 const FRONT_POOL = [], PRINT = mk(P), RM2 = mk(P), GRAY2 = mk(P), RING2 = mk(P);
 const idxOf = M => L.all.findIndex(A => Math.abs(A.a-M.a)+Math.abs(A.b-M.b)+Math.abs(A.c-M.c)+Math.abs(A.d-M.d) < 1e-6);
@@ -657,6 +686,7 @@ function buildPrint(fold, shape, color, ops){
 function applyOps(list){
   applied = list.slice();
   paintWedge(WX, S.fold, S.shape, paperA(), applied); paintWedge(WY, S.fold, S.shape, colorY(), applied);
+  dropScraps();
   buildF(FY, WY, L.all); refreshWYP();
   if (S.paperType === 'a4'){
     buildPrint(S.fold, S.shape, paperA(), S.mode==='lesson' ? lessonOps : applied);
@@ -1136,9 +1166,9 @@ function updatePreview(){
   const s = pv.width/(2*R*1.1);
   pvc.save(); pvc.shadowColor='rgba(0,0,0,.35)'; pvc.shadowBlur=8; pvc.shadowOffsetY=3;
   pvc.setTransform(s,0,0,s,pv.width/2,pv.height/2); pvc.drawImage(FX,-R,-R); pvc.restore();
-  const n = countPieces(), chip = $('#chipConn');
+  const n = countPieces() + lastScraps, chip = $('#chipConn');
   chip.className = 'chip' + (n===1 ? '' : n===0 ? ' bad' : ' warn');
-  chip.querySelector('span').textContent = n===1 ? '打開後是一整張' : n===0 ? '紙都剪光了' : `打開會散成 ${n} 塊`;
+  chip.querySelector('span').textContent = n===0 ? '紙都剪光了' : lastScraps ? `有 ${lastScraps} 塊碎紙沒連在主紙上，已經掉下去了` : n===1 ? '打開後是一整張' : `打開會散成 ${n} 塊`;
   $('#chipCount').textContent = S.ops.length ? `剪了 ${S.ops.length} 刀` : '還沒下刀';
 }
 
