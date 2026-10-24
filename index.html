@@ -79,15 +79,28 @@ header p{margin:4px 0 0;color:var(--muted);font-size:15px}
 #stage{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 .fsbtn{position:absolute;top:12px;right:12px;min-height:40px;padding:4px 14px;border:none;border-radius:999px;background:rgba(30,20,20,.6);color:#fff;font:inherit;font-size:15px;cursor:pointer}
 .fscap,.fsnav{display:none}
-.stage-wrap.is-fs{position:fixed;inset:0;z-index:50;width:100vw;height:100vh;max-width:none;min-width:0;aspect-ratio:auto;border:none;border-radius:0;box-shadow:none}
-.stage-wrap:fullscreen{width:100vw;height:100vh;max-width:none;aspect-ratio:auto;border:none;border-radius:0}
+.stage-wrap.is-fs{position:fixed;inset:0;z-index:50;width:auto;height:auto;max-width:none;min-width:0;aspect-ratio:auto;border:none;border-radius:0;box-shadow:none}
+.stage-wrap:fullscreen{width:100vw;height:100dvh;max-width:none;aspect-ratio:auto;border:none;border-radius:0}
 .stage-wrap.is-fs .fscap,.stage-wrap:fullscreen .fscap{display:flex;flex-direction:column;gap:4px;position:absolute;top:max(14px,env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));right:150px;pointer-events:none}
 .fscap b{font-family:var(--font-display);font-weight:400;font-size:clamp(26px,3.6vw,52px);color:#ffe27a;text-shadow:0 2px 0 rgba(0,0,0,.35)}
 .fscap span{font-size:clamp(18px,2.2vw,32px);color:#fff;max-width:28em;text-shadow:0 2px 6px rgba(0,0,0,.5);line-height:1.5}
-.stage-wrap.is-fs .fsnav,.stage-wrap:fullscreen .fsnav{display:flex;gap:10px;position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px))}
-.fsnav button{min-height:56px;padding:6px 22px;border:none;border-radius:999px;background:rgba(255,255,255,.92);color:#3b2b2b;font-family:var(--font-display);font-size:22px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.stage-wrap.is-fs .fsnav,.stage-wrap:fullscreen .fsnav{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:10px;position:absolute;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:max(14px,env(safe-area-inset-bottom,0px));max-width:720px;margin-left:auto}
+.fsnav button{min-height:60px;padding:6px 10px;border:none;border-radius:999px;background:rgba(255,255,255,.92);color:#3b2b2b;font-family:var(--font-display);font-size:22px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.25)}
 .fsnav #fsNext{background:var(--accent);color:#fff}
-.stage-wrap.is-fs .hud,.stage-wrap:fullscreen .hud{right:auto;bottom:max(16px,env(safe-area-inset-bottom,0px))}
+.stage-wrap.is-fs .hud,.stage-wrap:fullscreen .hud{display:none}
+@media (max-width:600px){ .fscap b{font-size:24px} .fscap span{font-size:17px} .stage-wrap.is-fs .fscap{right:120px} .fsnav button{font-size:17px;padding:4px 6px;white-space:nowrap} .stage-wrap.is-fs .fsnav,.stage-wrap:fullscreen .fsnav{gap:8px} }
+/* 手機：固定在底部的上一步／下一步 */
+.mbar{display:none}
+@media (max-width:920px){
+  body.lesson-mode .mbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:2px solid var(--line);box-shadow:0 -4px 14px rgba(0,0,0,.08);padding-block:8px calc(8px + env(safe-area-inset-bottom,0px));padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+  body.lesson-mode{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .mbar button{min-height:54px;min-width:84px;padding:4px 12px;white-space:nowrap;border:2px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-family:var(--font-display);font-size:19px;cursor:pointer;box-shadow:0 3px 0 var(--line)}
+  .mbar #mNext{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 3px 0 var(--accent-deep)}
+  .mbar .mid{min-width:0;text-align:center;line-height:1.25;cursor:pointer;background:none;border:none;color:var(--ink);font:inherit}
+  .mbar .mid small{display:block;font-size:13px;color:var(--muted)}
+  .mbar .mid b{display:block;font-family:var(--font-display);font-weight:400;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+}
 .hud{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;flex-wrap:wrap}
 .hud span{background:rgba(30,20,20,.6);color:#fff;padding:6px 14px;border-radius:999px;font-size:15px;line-height:1.4;max-width:100%}
 .hud .tag{font-family:var(--font-display);font-size:16px}
@@ -198,7 +211,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
         <div class="hud"><span id="hint">準備中…</span><span class="tag" id="tag"></span></div>
         <button class="fsbtn" id="fsBtn" aria-label="全螢幕觀看">⛶ 全螢幕</button>
         <div class="fscap" id="fsCap"><b id="fsTitle"></b><span id="fsText"></span></div>
-        <div class="fsnav" id="fsNav"><button id="fsPrev">上一步</button><button id="fsReplay">再看一次</button><button id="fsNext">下一步</button></div>
+        <div class="fsnav" id="fsNav"><button id="fsPrev">◀ 上一步</button><button id="fsReplay">↻ 再看</button><button id="fsNext">下一步 ▶</button></div>
       </div>
     </div>
 
@@ -366,6 +379,11 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
     </div>
   </details>
 </div>
+<nav class="mbar" id="mbar" aria-label="步驟切換">
+  <button id="mPrev">◀ 上一步</button>
+  <button class="mid" id="mMid" aria-label="再看一次這一步"><small id="mNum"></small><b id="mTitle"></b></button>
+  <button id="mNext">下一步 ▶</button>
+</nav>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1552,6 +1570,14 @@ async function toggleFs(){
 $('#fsBtn').onclick = toggleFs;
 document.addEventListener('fullscreenchange', () => { resize(); updateUI(); });
 document.addEventListener('webkitfullscreenchange', () => { resize(); updateUI(); });
+$('#mPrev').onclick = () => $('#prevStep').click();
+$('#mNext').onclick = () => $('#nextStep').click();
+$('#mMid').onclick = () => $('#replayStep').click();
+/* 教案模式：在動畫上左右滑動換步驟 */
+{ let sx = null, sy = null;
+  stage.addEventListener('pointerdown', e => { if (S.mode==='lesson'){ sx = e.clientX; sy = e.clientY; } });
+  stage.addEventListener('pointerup', e => { if (S.mode!=='lesson' || sx===null) return; const dx = e.clientX-sx, dy = e.clientY-sy; sx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)*1.3) (dx < 0 ? $('#nextStep') : $('#prevStep')).click(); }); }
 $('#fsPrev').onclick = () => S.mode==='lesson' ? $('#prevStep').click() : null;
 $('#fsNext').onclick = () => S.mode==='lesson' ? $('#nextStep').click() : null;
 $('#fsReplay').onclick = () => S.mode==='lesson' ? $('#replayStep').click() : $('#replay').click();
@@ -1609,7 +1635,12 @@ function updateUI(){
     $('#fsTitle').textContent = S.mode==='lesson' && s ? `${S.lstep+1}. ${s.title}` : '';
     $('#fsText').textContent = S.mode==='lesson' && s ? s.text : '';
     $('#fsPrev').hidden = $('#fsNext').hidden = S.mode !== 'lesson';
-    $('#fsNext').textContent = S.mode==='lesson' && S.lstep >= lessonSteps.length-1 ? '下一課' : '下一步'; }
+    $('#fsNext').textContent = S.mode==='lesson' && S.lstep >= lessonSteps.length-1 ? '下一課 ▶' : '下一步 ▶';
+    $('#fsPrev').disabled = $('#mPrev').disabled = S.lstep === 0 || recording;
+    document.body.classList.toggle('lesson-mode', S.mode==='lesson' && !fs);
+    $('#mNum').textContent = s ? `步驟 ${S.lstep+1}/${lessonSteps.length}・點我重看` : '';
+    $('#mTitle').textContent = s ? s.title : '';
+    $('#mNext').textContent = S.lstep >= lessonSteps.length-1 ? '下一課 ▶' : '下一步 ▶'; }
   $('#tag').textContent = `${FOLDS[S.fold].name}・${L.all.length} 份・${paperLabel()}`;
   updateHint();
 }
