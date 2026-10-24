@@ -341,7 +341,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
     <div class="notes-grid">
       <div>
         <h3>A4 列印版怎麼用</h3>
-        <p>印在 70–80 磅的 A4 影印紙或彩色影印紙。先沿外框剪下，印線那面朝自己，照 ①②③ 的順序沿虛線「往後摺」，有灰色的那一塊就會剛好在最上面，沿黑線剪掉灰色就完成了。</p>
+        <p>印在 70–80 磅的 A4 影印紙或彩色影印紙。先沿外框剪下；想要彩色作品就先把印線那面塗滿顏色。印線那面朝自己，照 ①②③ 的順序沿虛線「往後摺」，有斜線的那一塊就會剛好在最上面，沿黑線剪掉斜線部分就完成了。</p>
       </div>
       <div>
         <h3>單面色紙</h3>
@@ -562,7 +562,8 @@ const noise = mk(128); { const n = noise.getContext('2d'), id = n.createImageDat
   n.putImageData(id,0,0); }
 
 const tintHex = (hex, k) => { const n = parseInt(hex.slice(1),16), f = v => Math.round(v+(255-v)*k).toString(16).padStart(2,'0'); return '#'+f(n>>16&255)+f(n>>8&255)+f(n&255); };
-const paperA = () => S.paperType === 'a4' ? tintHex(S.colorA, .72) : S.colorA;
+let a4Color = 1;
+const paperA = () => S.paperType === 'a4' ? tintHex(S.colorA, 1 - .45*a4Color) : S.colorA;
 const colorY = () => S.paperType === 'single' ? '#f6f4ee' : S.paperType === 'a4' ? paperA() : S.colorB;
 const paperLabel = () => ({single:'單面色紙', double:'雙面色紙', a4:'A4 列印紙'})[S.paperType];
 const backLabel = () => S.paperType==='single' ? '背面：白色面' : S.paperType==='a4' ? '背面：乾淨沒有印線' : '背面：第二個顏色';
@@ -675,7 +676,7 @@ function buildPrint(fold, shape, color, ops){
   c.setTransform(1,0,0,1,R,R); paperPath(c, shape); c.fillStyle = color; c.fill(); c.setTransform(1,0,0,1,0,0);
   paintWedge(T1, fold, shape, '#000', []); paintWedge(T2, fold, shape, '#000', ops);
   const rc = RM2.getContext('2d'); rc.globalCompositeOperation='source-over'; rc.clearRect(0,0,P,P); rc.drawImage(T1,0,0); rc.globalCompositeOperation='destination-out'; rc.drawImage(T2,0,0); rc.globalCompositeOperation='source-over';
-  const hatch = mk(14), hc = hatch.getContext('2d'); hc.fillStyle='rgba(120,120,120,.35)'; hc.fillRect(0,0,14,14); hc.strokeStyle='rgba(80,80,80,.45)'; hc.lineWidth=2.4; hc.beginPath(); hc.moveTo(-3,17); hc.lineTo(17,-3); hc.stroke();
+  const hatch = mk(16), hc = hatch.getContext('2d'); hc.strokeStyle='rgba(80,80,80,.3)'; hc.lineWidth=1.8; hc.beginPath(); hc.moveTo(-3,17); hc.lineTo(17,-3); hc.stroke();
   const gc = GRAY2.getContext('2d'); gc.globalCompositeOperation='source-over'; gc.clearRect(0,0,P,P); gc.drawImage(RM2,0,0); gc.globalCompositeOperation='source-in'; gc.fillStyle=gc.createPattern(hatch,'repeat'); gc.fillRect(0,0,P,P); gc.globalCompositeOperation='source-over';
   c.drawImage(GRAY2,0,0);
   outlineOf(RM2, RING2, 3, '#1c1c1c'); const r2 = RING2.getContext('2d'); r2.globalCompositeOperation='destination-in'; r2.drawImage(T1,0,0); r2.globalCompositeOperation='source-over';
@@ -1036,19 +1037,27 @@ function buildStepsA4(les){
     text:`印出這一課的 A4 列印版，沿最外圈的實線把${circle?'圓形':'正方形'}剪下來。`,
     tip:'列印時選「實際大小／100%」；用 70–80 磅影印紙或彩色影印紙，太厚的紙摺很多層會剪不動。',
     run: async tok => {
-      applyOps([]); pencilOn=false; view='flat'; u=N; camK=0; flipT=0; a4Frame=1; a4Drop=0; render();
+      a4Color = 0; applyOps([]); pencilOn=false; view='flat'; u=N; camK=0; flipT=0; a4Frame=1; a4Drop=0; render();
       if (!await wait(1300, tok)) return;
       hudMsg = '沿外框剪下'; updateHint();
       if (!await tween(1000*spd(), t=>{ a4Drop = ease(t); }, tok)) return;
       a4Frame = 0; hudMsg = null; updateHint(); render();
     }});
-  FOLD_TEXT_A4[les.fold].forEach((t, i) => steps.push({kind:'fold', title:`${NUM[i]} 往後摺`, text:t,
-    tip: i===0 ? '「往後摺」就是把紙摺到背面去，印線的那面一直朝著自己。' : i===N-1 ? '摺好後，有灰色和黑線的那一塊剛好在最上面。' : '每一摺都對齊、用指甲壓平。',
-    run: async tok => { applyOps([]); a4Frame=0; pencilOn=false; view='flat'; camK=0; flipT=0; await foldOne(i, tok); }}));
-  steps.push({kind:'cut', title:'沿黑線剪下來',
-    text:`沿著印好的黑色實線，把灰色部分剪掉，一共 ${lessonOps.length} 個地方。`, tip: les.tip,
+  steps.push({kind:'color', title:'塗上顏色',
+    text:'想要彩色的作品：用彩色筆或蠟筆，把印線那面整張塗滿顏色。斜線的地方等一下會剪掉，不用塗。',
+    tip:'不想塗色也可以直接印在彩色影印紙上，或維持白色，貼在深色卡紙上一樣好看。',
     run: async tok => {
-      applyOps([]); a4Frame=0; pencilOn=false; view='flat'; u=0; flipT=0;
+      a4Frame=0; pencilOn=false; view='flat'; u=N; camK=0; flipT=0; a4Color=0; applyOps([]); render();
+      if (!await wait(500, tok)) return;
+      for (let i=1;i<=10;i++){ a4Color = i/10; applyOps([]); if (!await wait(110, tok)) return; }
+    }});
+  FOLD_TEXT_A4[les.fold].forEach((t, i) => steps.push({kind:'fold', title:`${NUM[i]} 往後摺`, text:t,
+    tip: i===0 ? '「往後摺」就是把紙摺到背面去，印線的那面一直朝著自己。' : i===N-1 ? '摺好後，有斜線和黑線的那一塊剛好在最上面。' : '每一摺都對齊、用指甲壓平。',
+    run: async tok => { a4Color=1; applyOps([]); a4Frame=0; pencilOn=false; view='flat'; camK=0; flipT=0; await foldOne(i, tok); }}));
+  steps.push({kind:'cut', title:'沿黑線剪下來',
+    text:`沿著印好的黑色實線，把斜線部分剪掉，一共 ${lessonOps.length} 個地方。`, tip: les.tip,
+    run: async tok => {
+      a4Color=1; applyOps([]); a4Frame=0; pencilOn=false; view='flat'; u=0; flipT=0;
       if (camK < 1 && !await tween(650*spd(), t=>{ camK = ease(t); }, tok)) return;
       camK = 1; render(); if (!await wait(500, tok)) return;
       for (let i=0;i<lessonOps.length;i++){
@@ -1063,7 +1072,7 @@ function buildStepsA4(les){
       text: last ? `把最後一摺打開壓平，一共 ${c} 份一樣的圖案！` : `從背面把一摺翻回來，現在看到 ${c} 份一樣的圖案。`,
       tip: last ? '正面還看得到印的摺線，翻過來背面是乾淨的。' : '打開前先猜猜看：再打開一摺會變幾份？',
       run: async tok => {
-        if (applied.length !== lessonOps.length) applyOps(lessonOps);
+        if (applied.length !== lessonOps.length || a4Color !== 1){ a4Color = 1; applyOps(lessonOps); }
         a4Frame=0; pencilOn=false; view='flat'; flipT=0; u=j;
         if (j===0){ camK=1; render(); if (!await wait(400, tok)) return; if (!await tween(700*spd(), t=>{ camK = 1-ease(t); }, tok)) return; }
         camK=0; if (!await wait(250, tok)) return;
@@ -1074,7 +1083,7 @@ function buildStepsA4(les){
     text:'翻過來看看：背面乾乾淨淨沒有印線，可以把這面當正面貼起來。',
     tip:`第 ${S.lesson+1} 課「${les.name}」完成。${les.theme}。`,
     run: async tok => {
-      if (applied.length !== lessonOps.length) applyOps(lessonOps);
+      if (applied.length !== lessonOps.length || a4Color !== 1){ a4Color = 1; applyOps(lessonOps); }
       a4Frame=0; view='flat'; u=N; camK=0; flipT=0; render();
       if (!await wait(600, tok)) return;
       await flipShow(tok, backLabel());
@@ -1238,10 +1247,9 @@ async function makeSheet(o){
   if (o.mask) WTl.getContext('2d').drawImage(o.mask,0,0); else paintWedge(WTl, o.fold, o.shape, '#000', o.ops);
   const draw = img => { c.save(); c.setTransform(s,0,0,s,cx,cy); c.drawImage(img,-R,-R); c.restore(); };
   // 最上面那一塊淡淡上色
-  const tint = mk(P), tc = tint.getContext('2d'); tc.drawImage(W0l,0,0); tc.globalCompositeOperation='source-in'; tc.fillStyle = o.color+'1c'; tc.fillRect(0,0,P,P); draw(tint);
   // 要剪掉的灰色
   const rc = rm.getContext('2d'); rc.drawImage(W0l,0,0); rc.globalCompositeOperation='destination-out'; rc.drawImage(WTl,0,0);
-  const hatch = mk(14), hc = hatch.getContext('2d'); hc.fillStyle='#dcdcdc'; hc.fillRect(0,0,14,14); hc.strokeStyle='#b4b4b4'; hc.lineWidth=2.4; hc.beginPath(); hc.moveTo(-3,17); hc.lineTo(17,-3); hc.stroke();
+  const hatch = mk(16), hc = hatch.getContext('2d'); hc.strokeStyle='#d6d6d6'; hc.lineWidth=1.6; hc.beginPath(); hc.moveTo(-3,19); hc.lineTo(19,-3); hc.stroke();
   const gray = mk(P), gc = gray.getContext('2d'); gc.drawImage(rm,0,0); gc.globalCompositeOperation='source-in'; gc.fillStyle=gc.createPattern(hatch,'repeat'); gc.fillRect(0,0,P,P); draw(gray);
   // 剪線（粗黑實線）
   outlineOf(rm, rg, 2.6, '#1c1c1c'); const rgc = rg.getContext('2d'); rgc.globalCompositeOperation='destination-in'; rgc.drawImage(W0l,0,0); draw(rg);
@@ -1264,8 +1272,9 @@ async function makeSheet(o){
   // 步驟說明
   const steps = [
     `沿最外圈的實線 ✂ 把${circle?'圓形':'正方形'}剪下來。`,
+    '想要彩色的作品：先用彩色筆或蠟筆，把印線那面整張塗滿顏色（斜線的地方會剪掉，不用塗）。',
     `印線那面朝自己，照 ${NUM.slice(0,N).join('')} 順序沿虛線「往後摺」到背面。`,
-    '摺好後，有灰色的那一塊會在最上面：沿黑色實線，把灰色部分剪掉。',
+    '摺好後，有斜線的那一塊會在最上面：沿黑色實線，把斜線部分剪掉。',
     `慢慢打開，${copies} 份一樣的圖案就出現了！`
   ];
   let y = 222*MM; const colW = 128*MM;
@@ -1274,13 +1283,13 @@ async function makeSheet(o){
     c.fillStyle='#fff'; c.font = `${4.2*MM}px ${DISPLAY}`; c.textAlign='center'; c.fillText(String(i+1), 18*MM, y+3.1*MM); c.textAlign='left';
     c.fillStyle='#3b2b2b'; c.font = `500 ${3.9*MM}px ${FONT}`;
     const lines = wrapText(c, t, colW); lines.forEach((l, j) => c.fillText(l, 24*MM, y+3*MM+j*5.6*MM));
-    y += Math.max(1, lines.length)*5.6*MM + 2.6*MM;
+    y += Math.max(1, lines.length)*5.4*MM + 2*MM;
   });
   if (o.tip){ c.fillStyle='#7a625d'; c.font = `500 ${3.5*MM}px ${FONT}`; wrapText(c, '小撇步：'+o.tip, colW+6*MM).forEach((l,j)=>c.fillText(l, 18*MM, y+3*MM+j*5*MM)); }
   // 打開後的樣子
   const bx = 152*MM, by = 220*MM, bs = 44*MM;
   roundRect(c, bx, by, bs, bs+7*MM, 4*MM, '#fff4e6', '#f1d8c6');
-  c.fillStyle='#7a625d'; c.font = `${3.8*MM}px ${DISPLAY}`; c.textAlign='center'; c.fillText('打開後會長這樣', bx+bs/2, by+5.6*MM); c.textAlign='left';
+  c.fillStyle='#7a625d'; c.font = `${3.8*MM}px ${DISPLAY}`; c.textAlign='center'; c.fillText('塗色後打開的樣子', bx+bs/2, by+5.6*MM); c.textAlign='left';
   const fc = mk(P), fw = mk(P); if (o.mask){ const g = fw.getContext('2d'); g.drawImage(o.mask,0,0); g.globalCompositeOperation='source-in'; g.fillStyle=o.color; g.fillRect(0,0,P,P); g.globalCompositeOperation='source-over'; } else paintWedge(fw, o.fold, o.shape, o.color, o.ops); buildF(fc, fw, buildLayers(o.fold).all);
   const ps = (bs-6*MM)/(2*R); c.save(); c.setTransform(ps,0,0,ps,bx+bs/2,by+7*MM+bs/2); c.drawImage(fc,-R,-R); c.restore();
   // 圖例
@@ -1289,7 +1298,7 @@ async function makeSheet(o){
   c.fillText('摺線（往後摺）', 29*MM, y);
   c.strokeStyle='#1c1c1c'; c.lineWidth=.6*MM; c.beginPath(); c.moveTo(66*MM,y-1.2*MM); c.lineTo(78*MM,y-1.2*MM); c.stroke();
   c.fillText('剪線', 80*MM, y);
-  c.fillStyle='#dcdcdc'; c.fillRect(95*MM, y-3.6*MM, 9*MM, 5*MM); c.strokeStyle='#b4b4b4'; c.lineWidth=.3*MM; c.strokeRect(95*MM, y-3.6*MM, 9*MM, 5*MM);
+  c.save(); c.beginPath(); c.rect(95*MM, y-3.6*MM, 9*MM, 5*MM); c.clip(); c.strokeStyle='#bdbdbd'; c.lineWidth=.25*MM; for (let k=-6;k<16;k+=2){ c.beginPath(); c.moveTo((95+k)*MM, y+1.4*MM); c.lineTo((100+k)*MM, y-3.6*MM); c.stroke(); } c.restore(); c.strokeStyle='#bdbdbd'; c.lineWidth=.3*MM; c.strokeRect(95*MM, y-3.6*MM, 9*MM, 5*MM);
   c.fillStyle='#3b2b2b'; c.fillText('剪掉', 106*MM, y);
   c.fillStyle='#b09a94'; c.textAlign='right'; c.fillText('對摺剪紙工坊', 195*MM, y); c.textAlign='left';
   return cv;
@@ -1374,7 +1383,7 @@ const shapeIcon = k => `<svg viewBox="0 0 24 24" aria-hidden="true"><polygon poi
 const stars = n => '★'.repeat(n) + '☆'.repeat(3-n);
 
 function onPaperChange(){
-  a4Frame = 0;
+  a4Frame = 0; a4Color = 1;
   if (S.mode==='lesson'){
     applyOps(applied);
     lessonSteps = buildSteps(LESSONS[S.lesson]); renderStepList(); runLessonStep(S.lstep);
