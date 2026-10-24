@@ -317,6 +317,14 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
               <button data-v="slow">慢</button><button data-v="mid">中</button><button data-v="fast">快</button>
             </div>
           </div>
+          <div class="group a4box">
+            <span class="label">把我的設計做成 A4 列印版</span>
+            <label class="rng" for="dName"><span>作品名稱（會印在紙上）</span></label>
+            <input id="dName" type="text" value="我的設計" maxlength="12" style="min-height:44px;border:2px solid var(--line);border-radius:999px;padding:6px 16px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)">
+            <img id="dA4img" alt="我的設計 A4 列印版預覽">
+            <button class="cta" id="dA4">下載我的 A4 列印版（PDF）</button>
+            <p class="note">列印時選「實際大小／100%」，紙上的正方形才會是 18 公分。</p>
+          </div>
           <button class="ghost" id="dRecord">錄下打開過程（影片）</button>
           <button class="cta" id="backCut">摺回去再剪幾刀</button>
         </div>
@@ -1131,7 +1139,7 @@ async function goDesign(n){
   const from = S.dstep; cancelAnim(); poly = []; cur = []; S.dstep = n; updateUI();
   if (n === 1){ view='flat'; camK=0; flipT=0; u=L.steps.length; render(); }
   else if (n === 2){ if (from===2 && view==='edit') return render(); await designFoldUp(); }
-  else await designUnfold();
+  else { updateDesignA4(); await designUnfold(); }
 }
 const snapshot = () => ({fold:S.fold, shape:S.shape, ops:S.ops.slice()});
 function restore(s){ setPaper(s.fold, s.shape); S.ops = s.ops.slice(); applyOps(S.ops); }
@@ -1216,7 +1224,7 @@ async function makeSheet(o){
   // 標題列
   c.textBaseline='alphabetic';
   c.font = `${5.4*MM}px ${DISPLAY}`;
-  const tag = o.no ? `第 ${o.no} 課` : '我的設計', tw = c.measureText(tag).width + 6*MM;
+  const tag = o.no ? `第 ${o.no} 課` : '自己設計', tw = c.measureText(tag).width + 6*MM;
   c.save(); c.translate(15*MM, 14*MM); c.rotate(-.04); roundRect(c, 0, 0, tw, 9*MM, 4.5*MM, '#ffc83d'); c.fillStyle='#3b2b2b'; c.fillText(tag, 3*MM, 6.6*MM); c.restore();
   c.fillStyle='#3b2b2b'; c.font = `${11*MM}px ${DISPLAY}`; c.fillText(o.name, 15*MM+tw+4*MM, 23.5*MM);
   if (o.level){ c.font = `${6*MM}px ${DISPLAY}`; c.fillStyle='#f2a900'; c.textAlign='right'; c.fillText(stars(o.level), 195*MM, 22*MM); c.textAlign='left'; }
@@ -1226,7 +1234,8 @@ async function makeSheet(o){
   // 紙
   const side = 180*MM, cx = 105*MM, cy = 125*MM, s = side/(2*R);
   const W0l = mk(P), WTl = mk(P), rm = mk(P), rg = mk(P);
-  paintWedge(W0l, o.fold, o.shape, '#000', []); paintWedge(WTl, o.fold, o.shape, '#000', o.ops);
+  paintWedge(W0l, o.fold, o.shape, '#000', []);
+  if (o.mask) WTl.getContext('2d').drawImage(o.mask,0,0); else paintWedge(WTl, o.fold, o.shape, '#000', o.ops);
   const draw = img => { c.save(); c.setTransform(s,0,0,s,cx,cy); c.drawImage(img,-R,-R); c.restore(); };
   // 最上面那一塊淡淡上色
   const tint = mk(P), tc = tint.getContext('2d'); tc.drawImage(W0l,0,0); tc.globalCompositeOperation='source-in'; tc.fillStyle = o.color+'1c'; tc.fillRect(0,0,P,P); draw(tint);
@@ -1272,7 +1281,7 @@ async function makeSheet(o){
   const bx = 152*MM, by = 220*MM, bs = 44*MM;
   roundRect(c, bx, by, bs, bs+7*MM, 4*MM, '#fff4e6', '#f1d8c6');
   c.fillStyle='#7a625d'; c.font = `${3.8*MM}px ${DISPLAY}`; c.textAlign='center'; c.fillText('打開後會長這樣', bx+bs/2, by+5.6*MM); c.textAlign='left';
-  const fc = mk(P), fw = mk(P); paintWedge(fw, o.fold, o.shape, o.color, o.ops); buildF(fc, fw, buildLayers(o.fold).all);
+  const fc = mk(P), fw = mk(P); if (o.mask){ const g = fw.getContext('2d'); g.drawImage(o.mask,0,0); g.globalCompositeOperation='source-in'; g.fillStyle=o.color; g.fillRect(0,0,P,P); g.globalCompositeOperation='source-over'; } else paintWedge(fw, o.fold, o.shape, o.color, o.ops); buildF(fc, fw, buildLayers(o.fold).all);
   const ps = (bs-6*MM)/(2*R); c.save(); c.setTransform(ps,0,0,ps,bx+bs/2,by+7*MM+bs/2); c.drawImage(fc,-R,-R); c.restore();
   // 圖例
   y = 286*MM; c.font = `500 ${3.5*MM}px ${FONT}`; c.fillStyle='#3b2b2b';
@@ -1451,7 +1460,16 @@ $('#redo').onclick = () => { if (!redoStack.length) return; hist.push(snapshot()
 $('#clearCuts').onclick = () => { if (!S.ops.length) return; pushHist(); S.ops = []; applyOps([]); updateUI(); render(); toast('已清掉所有刀痕，按「復原」可找回'); };
 $('#polyDone').onclick = finishPoly;
 $('#polyCancel').onclick = () => { poly = []; updateUI(); render(); };
-$('#dTemplate').onclick = () => buildPdf([{no:0, name:'我的設計', level:0, fold:S.fold, shape:S.shape, color:S.colorA, ops:orderOps(S.ops), theme:'', tip:''}], false, `剪紙A4_我的設計_${FOLDS[S.fold].name}.pdf`);
+function designSheet(){ const m = mk(P); m.getContext('2d').drawImage(WY,0,0);
+  const name = ($('#dName').value || '').trim() || '我的設計';
+  return {no:0, name, level:0, fold:S.fold, shape:S.shape, color:S.colorA, ops:S.ops, mask:m, theme:`剪了 ${S.ops.length} 刀`, tip:''}; }
+const designPdf = () => { if (!S.ops.length){ toast('還沒剪任何一刀，先到「2 剪紙」剪幾刀吧'); return; }
+  const o = designSheet(); buildPdf([o], false, `剪紙A4_${o.name}_${FOLDS[S.fold].name}.pdf`); };
+$('#dTemplate').onclick = designPdf; $('#dA4').onclick = designPdf;
+let dA4Seq = 0;
+async function updateDesignA4(){ const seq = ++dA4Seq; await new Promise(r => setTimeout(r, 120)); if (seq !== dA4Seq || S.mode !== 'design') return;
+  const cv = await makeSheet(designSheet()); if (seq === dA4Seq) $('#dA4img').src = cv.toDataURL('image/jpeg', .82); }
+$('#dName').oninput = updateDesignA4;
 
 $$('.modes button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 let designState = null;
